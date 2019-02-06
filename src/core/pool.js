@@ -47,7 +47,7 @@ class pool {
   * @param {object} item - Task to process
   */
   processQueue(item, hamster) {
-  	return this.runTask(hamster, item[0], item[1], item[2], item[3], item[4]);
+  	return this.runTask(thread, hamster, item[0], item[1], item[2], item[3], item[4]);
   }
 
   /**
@@ -154,12 +154,14 @@ class pool {
   * @param {function} resolve - onSuccess method
   * @param {function} reject - onError method
   */
-  hamsterWheel(array, task, scope, resolve, reject) {
+  hamsterWheel(thread, task, scope, resolve, reject) {
     if(scope.maxThreads === this.running.length) {
-      return this.addWorkToPending(array, task, scope, resolve, reject);
+      return this.addWorkToPending(thread, task, scope, resolve, reject);
     }
     let hamster = this.grabHamster(this.running.length, scope.habitat);
-    return this.runTask(hamster, array, task, scope, resolve, reject);
+    let index = task.indexes[thread];
+    let subArray = scope.data.getSubArrayUsingIndex(task.input.array, index);
+    return this.runTask(hamster, subArray, task, scope, resolve, reject);
   }
 
   /**
@@ -234,17 +236,9 @@ class pool {
   */
   scheduleTask(task, scope) {
   	return new Promise((resolve, reject) => {
-      let threadArrays = [];
-      if(task.input.array && task.threads !== 1) {
-        threadArrays = scope.data.splitArrays(task.input.array, task.threads); //Divide our array into equal array sizes
-      }
       let i = 0;
       while (i < task.threads) {
-      	if(threadArrays && task.threads !== 1) {
-        	this.hamsterWheel(threadArrays[i], task, scope, resolve, reject);
-		    } else {
-        	this.hamsterWheel(task.input.array, task, scope, resolve, reject);
-		    }
+        this.hamsterWheel(i, task, scope, resolve, reject);
         i += 1;
       }
     });

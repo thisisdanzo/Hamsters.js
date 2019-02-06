@@ -99,20 +99,17 @@ class hamstersjs {
     this.dataType = (params.dataType ? params.dataType.toLowerCase() : null);
     this.input = params;
     // Do not modify function if we're running on the main thread for legacy fallback
-    if(scope.habitat.legacy) {
-      this.threads = 1;
-      this.input.hamstersJob = functionToRun;
-    } else {
-      this.threads = (params.threads || 1);
-      this.input.hamstersJob = scope.data.prepareJob(functionToRun);
-    }
+    this.threads = (scope.habitat.legacy ? 1 : (params.threads || 1));
+    this.input.hamstersJob = (scope.habitat.legacy ? functionToRun : scope.data.prepareJob(functionToRun));
+    // Determine sub array indexes, precalculate ahead of time so we can pull data only when executing on a thread 
+    this.indexes = scope.data.generateIndexes(this.input.array, this.threads);
   }
 
   scheduleTask(task, resolve, reject) {
-    this.pool.scheduleTask(task, this).then((results) => {
-      return resolve(results);
+    return this.pool.scheduleTask(task, this).then((results) => {
+      resolve(results);
     }).catch((error) => {
-      return hamstersLogger.error(error.messsage, reject);
+      hamstersLogger.error(error.messsage, reject);
     });
   }
 

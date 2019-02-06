@@ -23,7 +23,7 @@ class data {
   constructor() {
     this.randomArray = this.randomArray;
     this.aggregateArrays = this.aggregateThreadOutputs;
-    this.splitArrays = this.splitArrayIntoSubArrays;
+    this.generateIndexes = this.determineSubArrayIndexes;
     this.createBlob = this.createDataBlob;
     this.generateWorkerBlob = this.generateWorkerBlob;
     this.processDataType = this.processDataType;
@@ -240,24 +240,30 @@ class data {
   }
 
   /**
-  * @function splitArrayIntoSubArrays - Splits a single array into multiple equal sized subarrays
-  * @param {array} array - Array to split
-  * @param {number} n - Number of subarrays to create
+  * @function determineSubArrayIndexes - Creates object containing starting and end value indexs for subarrays
+  * @param {array} array - Array to use
+  * @param {number} n - Number of subarrays to create indexes for
   */
-  splitArrayIntoSubArrays(array, n) {
+  determineSubArrayIndexes(array, n) {
     let i = 0;
-    let threadArrays = [];
     let size = Math.ceil(array.length/n);
-    if(array.slice) {
-      while(i < array.length) {
-        threadArrays.push(array.slice(i, i += size));
-      }
-    } else {
-      while (i < array.length) {
-        threadArrays.push(array.subarray(i, i += size));
-      }
+    let indexes = [];
+    while(i < array.length) {
+      indexes.push({start: i, end: (i += size)});
     }
-    return threadArrays;
+    return indexes;
+  }
+
+  /**
+  * @function getSubArrayUsingIndex - Fetches subarray from array using pre-determined start and end index
+  * @param {array} array - Array to split
+  * @param {index} object - Object containing index of start and end values for subarray
+  */
+  getSubArrayUsingIndex(array, index) {
+    if(array.slice) {
+      return array.slice(index['start'], index['end']);
+    }
+    return array.subarray(index['start'], index['end']);
   }
 }
 

@@ -55,9 +55,6 @@ class habitat {
         max = 20;
       }
     }
-    if(this.node && typeof os !== 'undefined') {
-      max = os.cpus().length;
-    }
     return max;
   }
 

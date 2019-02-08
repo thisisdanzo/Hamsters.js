@@ -48,7 +48,7 @@ class hamstersjs {
     if(!this.habitat.legacy && this.habitat.persistence === true) {
       hamstersPool.spawnHamsters(this.maxThreads);
     }
-    this.logger.info(`Hamsters.js v${this.version} initialized using up to ${this.maxThreads} threads.`);
+    this.logger.info(`initialized using up to ${this.maxThreads} threads.`);
     delete this.init;
   }
 
@@ -93,16 +93,15 @@ class hamstersjs {
     this.id = scope.pool.tasks.length;
     this.count = 0;
     this.aggregate = (params.aggregate || false);
-    this.output = [];
     this.workers = [];
     this.memoize = (params.memoize || false);
     this.dataType = (params.dataType ? params.dataType.toLowerCase() : null);
-    this.input = params;
+    this.params = params;
     // Do not modify function if we're running on the main thread for legacy fallback
     this.threads = (scope.habitat.legacy ? 1 : (params.threads || 1));
-    this.input.hamstersJob = (scope.habitat.legacy ? functionToRun : scope.data.prepareJob(functionToRun));
+    this.hamstersJob = (scope.habitat.legacy ? functionToRun : scope.data.prepareJob(functionToRun));
     // Determine sub array indexes, precalculate ahead of time so we can pull data only when executing on a thread 
-    this.indexes = scope.data.generateIndexes(this.input.array, this.threads);
+    this.indexes = scope.data.generateIndexes(this.params.array, this.threads);
   }
 
   scheduleTask(task, resolve, reject) {
@@ -123,7 +122,7 @@ class hamstersjs {
   hamstersPromise(params, functionToRun) {
     return new Promise((resolve, reject) => {
       let task = new this.hamstersTask(params, functionToRun, this);
-      this.scheduleTask(task, resolve, reject);
+      return this.scheduleTask(task, resolve, reject);
     });
   }
 
@@ -138,7 +137,7 @@ class hamstersjs {
   */
   hamstersRun(params, functionToRun, onSuccess, onError) {
     let task = new this.hamstersTask(params, functionToRun, this);
-    this.scheduleTask(task, onSuccess, onError);
+    return this.scheduleTask(task, onSuccess, onError);
   }
 }
 

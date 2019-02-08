@@ -110,11 +110,8 @@ class data {
   * @function prepareOutput - Prepares final task output
   * @param {task} buffer - Task to prepare output for
   */
-  prepareOutput(task, transferrable) {
-    if(task.aggregate && task.threads !== 1) {
-      return this.aggregateThreadOutputs(task.output, task.dataType, transferrable);
-    }
-    return task.output;
+  prepareOutput(task) {
+    return task.params.array;
   }
 
   /**

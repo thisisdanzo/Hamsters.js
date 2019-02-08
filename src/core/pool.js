@@ -47,7 +47,7 @@ class pool {
   * @param {object} item - Task to process
   */
   processQueue(item, hamster) {
-  	return this.runTask(thread, hamster, item[0], item[1], item[2], item[3], item[4]);
+  	return this.runTask(hamster, item[0], item[1], item[2], item[3], item[4]);
   }
 
   /**
@@ -114,9 +114,9 @@ class pool {
     let hamsterFood = {
     	array: threadArray
     };
-    for (var key in task.input) {
-      if (task.input.hasOwnProperty(key) && ['array', 'threads'].indexOf(key) === -1) {
-        hamsterFood[key] = task.input[key];
+    for (var key in task.params) {
+      if (task.params.hasOwnProperty(key) && ['array', 'threads'].indexOf(key) === -1) {
+        hamsterFood[key] = task.params[key];
       }
     }
     return hamsterFood;
@@ -131,8 +131,9 @@ class pool {
   * @param {function} resolve - onSuccess method
   * @param {function} reject - onError method
   */
-  runTask(hamster, array, task, scope, resolve, reject) {
+  runTask(hamster, index, task, scope, resolve, reject) {
   	let threadId = this.running.length;
+    let array = scope.data.getSubArrayUsingIndex(task.params.array, index);
     let hamsterFood = this.prepareMeal(array, task);
     this.registerTask(task.id);
     this.keepTrackOfThread(task, threadId);
@@ -155,13 +156,12 @@ class pool {
   * @param {function} reject - onError method
   */
   hamsterWheel(thread, task, scope, resolve, reject) {
+    let index = task.indexes[thread];
     if(scope.maxThreads === this.running.length) {
-      return this.addWorkToPending(thread, task, scope, resolve, reject);
+      return this.addWorkToPending(index, task, scope, resolve, reject);
     }
     let hamster = this.grabHamster(this.running.length, scope.habitat);
-    let index = task.indexes[thread];
-    let subArray = scope.data.getSubArrayUsingIndex(task.input.array, index);
-    return this.runTask(hamster, subArray, task, scope, resolve, reject);
+    this.runTask(hamster, index, task, scope, resolve, reject);
   }
 
   /**
@@ -181,6 +181,21 @@ class pool {
   }
 
   /**
+  * @function trainHamster - Merges output data into data array, using indexes
+  * @param {object} task - Provided library functionality options for this task
+  * @param {number} threadId - Internal use id for this thread
+  * @param {object} results - Message object containing results from thread
+  */
+  mergeOutputData(task, scope, threadId, results) {
+    var data = scope.habitat.reactNative ? JSON.parse(results.data) : results.data;
+    var arrayIndex = task.indexes[threadId].start; //Starting value index for subarray to merge
+    for (var i = 0; i < data.length; i++) {
+      task.params.array[arrayIndex] = data[i];
+      arrayIndex++;
+    }
+  }
+
+  /**
   * @function trainHamster - Trains thread in how to behave
   * @param {number} threadId - Internal use id for this thread
   * @param {object} task - Provided library functionality options for this task
@@ -196,19 +211,14 @@ class pool {
       let results = message.data;
       pool.running.splice(pool.running.indexOf(threadId), 1); //Remove thread from running pool
     	task.workers.splice(task.workers.indexOf(threadId), 1); //Remove thread from task running pool
-      // String only communcation for rn...in 2k18
-      if(scope.habitat.reactNative) {
-        task.output[threadId] = JSON.parse(results.data);
-      } else {
-        task.output[threadId] = results.data;
-      }
-      if (task.workers.length === 0 && task.count === task.threads) {
-        pool.returnOutputAndRemoveTask(task, resolve);
-      }
-      if (pool.pending.length !== 0) {
+      if (pool.pending.length !== 0) { //If work is pending, get it started before doing heavy data merge..keep cpu busy not waiting
         pool.processQueue(pool.pending.shift(), hamster);
       } else if (!scope.habitat.persistence && !scope.habitat.webWorker) {
         hamster.terminate(); //Kill the thread only if no items waiting to run (20-22% performance improvement observed during testing, repurposing threads vs recreating them)
+      }
+      pool.mergeOutputData(task, scope, threadId, results); //Merge results into data array as the thread returns, merge immediately don't wait
+      if (task.workers.length === 0 && task.count === task.threads) { 
+        pool.returnOutputAndRemoveTask(task, resolve);
       }
     }
     // Handle error response from a thread

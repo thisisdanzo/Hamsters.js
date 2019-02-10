@@ -202,6 +202,10 @@ class pool {
     task.completedAt = Date.now();
     let returnData = {
       threads: task.threads,
+      dataType: task.dataType,
+      memoize: task.memoize,
+      indexes: task.indexes,
+      aggregate: task.aggregate,
       createdAt: task.createdAt,
       completedAt: task.completedAt,
       results: output

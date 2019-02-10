@@ -81,13 +81,7 @@ class hamstersjs {
     }
   }
 
-  scheduleTask(task, resolve, reject) {
-    return this.pool.scheduleTask(task, this).then((results) => {
-      resolve(results);
-    }).catch((error) => {
-      hamstersLogger.error(error.message, reject);
-    });
-  }
+
 
   /**
   * @async
@@ -99,7 +93,11 @@ class hamstersjs {
   hamstersPromise(params, functionToRun) {
     return new Promise((resolve, reject) => {
       let task = new hamstersPool.task(params, functionToRun, this, resolve, reject);
-      return this.scheduleTask(task);
+      hamstersPool.scheduleTask(task, this).then((results) => {
+        task.onSuccess(results);
+      }).catch((error) => {
+        hamstersLogger.error(error.message, task.onError);
+      });
     });
   }
 
@@ -114,7 +112,11 @@ class hamstersjs {
   */
   hamstersRun(params, functionToRun, onSuccess, onError) {
     let task = new hamstersPool.task(params, functionToRun, this, onSuccess, onError);
-    return this.scheduleTask(task);
+    hamstersPool.scheduleTask(task, this).then((results) => {
+      task.onSuccess(results);
+    }).catch((error) => {
+      hamstersLogger.error(error.message, task.onError);
+    });
   }
 }
 

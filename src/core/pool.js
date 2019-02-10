@@ -92,7 +92,7 @@ class pool {
     return new Promise((resolve, reject) => {
       let i = 0;
       while (i < task.threads) {
-        this.hamsterWheel(i, task, scope);
+        this.hamsterWheel(i, task, scope, resolve, reject);
         i += 1;
       }
     });
@@ -144,14 +144,6 @@ class pool {
     this.indexes = hamstersData.generateIndexes(this.params.array, this.threads);
     this.onSuccess = resolve;
     this.onError = reject;
-  }
-
-  scheduleTask(task) {
-    this.scheduleTask(task, this).then((results) => {
-      task.onSuccess(results);
-    }).catch((error) => {
-      hamstersLogger.error(error.message, task.onError);
-    });
   }
 
   /**

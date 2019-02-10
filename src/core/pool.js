@@ -23,7 +23,7 @@ class pool {
   */
   constructor() {
     this.tasks = [];
-	  this.threads = [];
+    this.threads = [];
     this.running = [];
     this.pending = [];
     this.fetchHamster = this.grabHamster;
@@ -82,6 +82,23 @@ class pool {
   }
 
   /**
+  * @function scheduleTask - Adds new task to the system for execution
+  * @param {object} task - Provided library functionality options for this task
+  * @param {boolean} persistence - Whether persistence mode is enabled or not
+  * @param {function} wheel - Scaffold to execute login within
+  * @param {number} maxThreads - Maximum number of threads for this client
+  */
+  scheduleTask(task, scope) {
+    return new Promise((resolve, reject) => {
+      let i = 0;
+      while (i < task.threads) {
+        this.hamsterWheel(i, task, scope);
+        i += 1;
+      }
+    });
+  }
+
+  /**
   * @function spawnHamsters - Spawns multiple new threads for execution
   * @param {function} wheel - Results from select hamster wheel
   * @param {number} maxThreds - Max number of threads for this client
@@ -105,21 +122,36 @@ class pool {
   }
 
   /**
-  * @function prepareMeal - Prepares message to send to a thread and invoke execution
-  * @param {object} threadArray - Provided data to execute logic on
-  * @param {object} task - Provided library functionality options for this task
-  * @return {object} hamsterFood - Prepared message to send to a thread
+  * @constructor
+  * @function task - Constructs a new task object from provided arguments
+  * @param {object} params - Provided library execution options
+  * @param {function} functionToRun - Function to execute
+  * @param {object} scope - Reference to main library context
+  * @return {object} new Hamsters.js task
   */
-  prepareMeal(threadArray, task) {
-    let hamsterFood = {
-    	array: threadArray
-    };
-    for (var key in task.params) {
-      if (task.params.hasOwnProperty(key) && ['array', 'threads'].indexOf(key) === -1) {
-        hamsterFood[key] = task.params[key];
-      }
-    }
-    return hamsterFood;
+  task(params, functionToRun, scope, resolve, reject) {
+    this.id = scope.pool.tasks.length;
+    this.count = 0;
+    this.aggregate = (params.aggregate || false);
+    this.workers = [];
+    this.memoize = (params.memoize || false);
+    this.dataType = (params.dataType ? params.dataType.toLowerCase() : null);
+    this.params = params;
+    // Do not modify function if we're running on the main thread for legacy fallback
+    this.threads = (scope.habitat.legacy ? 1 : (params.threads || 1));
+    this.hamstersJob = (scope.habitat.legacy ? functionToRun : hamstersData.prepareJob(functionToRun));
+    // Determine sub array indexes, precalculate ahead of time so we can pull data only when executing on a thread 
+    this.indexes = hamstersData.generateIndexes(this.params.array, this.threads);
+    this.onSuccess = resolve;
+    this.onError = reject;
+  }
+
+  scheduleTask(task) {
+    this.scheduleTask(task, this).then((results) => {
+      task.onSuccess(results);
+    }).catch((error) => {
+      hamstersLogger.error(error.message, task.onError);
+    });
   }
 
   /**
@@ -133,15 +165,14 @@ class pool {
   */
   runTask(hamster, index, task, scope, resolve, reject) {
   	let threadId = this.running.length;
-    let array = scope.data.getSubArrayUsingIndex(task.params.array, index);
-    let hamsterFood = this.prepareMeal(array, task);
+    let hamsterFood = hamstersData.prepareMeal(index, task);
     this.registerTask(task.id);
     this.keepTrackOfThread(task, threadId);
-    if(scope.habitat.legacy) {
-      scope.habitat.legacyWheel(hamsterFood, resolve, reject);
+    if(hamstersHabitat.legacy) {
+      hamstersHabitat.legacyWheel(hamsterFood, resolve, reject);
     } else {
       this.trainHamster(task.count, task, hamster, scope, resolve, reject);
-      scope.data.feedHamster(hamster, hamsterFood, scope.habitat);
+      hamstersData.feedHamster(hamster, hamsterFood, scope.habitat);
     }
     task.count += 1; //Increment count, thread is running
   }
@@ -170,7 +201,7 @@ class pool {
   * @param {function} resolve - onSuccess method
   */
   returnOutputAndRemoveTask(task, resolve) {
-    let output = hamstersData.getOutput(task, hamstersHabitat.transferrable);
+    let output = hamstersData.getOutput(task);
     if (task.sort) {
       output = hamstersData.sortOutput(output, task.sort);
     }
@@ -178,21 +209,6 @@ class pool {
     resolve({
       data: output
     });
-  }
-
-  /**
-  * @function trainHamster - Merges output data into data array, using indexes
-  * @param {object} task - Provided library functionality options for this task
-  * @param {number} threadId - Internal use id for this thread
-  * @param {object} results - Message object containing results from thread
-  */
-  mergeOutputData(task, scope, threadId, results) {
-    var data = scope.habitat.reactNative ? JSON.parse(results.data) : results.data;
-    var arrayIndex = task.indexes[threadId].start; //Starting value index for subarray to merge
-    for (var i = 0; i < data.length; i++) {
-      task.params.array[arrayIndex] = data[i];
-      arrayIndex++;
-    }
   }
 
   /**
@@ -204,6 +220,36 @@ class pool {
   * @param {function} resolve - onSuccess method
   * @param {function} reject - onError method
   */
+  checkQueueOrKillThread(scope, hamster) {
+    if (this.pending.length !== 0) { //If work is pending, get it started before doing heavy data merge..keep cpu busy not waiting
+      this.processQueue(this.pending.shift(), hamster);
+    } else if (!scope.habitat.persistence && !scope.habitat.webWorker) {
+      hamster.terminate(); //Kill the thread only if no items waiting to run (20-22% performance improvement observed during testing, repurposing threads vs recreating them)
+    }
+  }
+
+  /**
+  * @function processThreadOutput - Handles output data from thread
+  * @param {object} task - Provided library functionality options for this task
+  * @param {number} threadId - Internal use id for this thread
+  * @param {worker} hamster - Thread to train
+  * @param {function} resolve - onSuccess method
+  */
+  processThreadOutput(task, threadId, results, resolve) {
+    hamstersData.mergeOutputData(task, threadId, results); //Merge results into data array as the thread returns, merge immediately don't wait
+    if (task.workers.length === 0 && task.count === task.threads) { 
+      this.returnOutputAndRemoveTask(task, resolve);
+    }
+  }
+
+  /**
+  * @function trainHamster - Trains thread in how to behave
+  * @param {number} threadId - Internal use id for this thread
+  * @param {object} task - Provided library functionality options for this task
+  * @param {worker} hamster - Thread to train
+  * @param {function} resolve - onSuccess method
+  * @param {function} reject - onError method
+  */
   trainHamster(threadId, task, hamster, scope, resolve, reject) {
     let pool = this;
     // Handle successful response from a thread
@@ -211,15 +257,8 @@ class pool {
       let results = message.data;
       pool.running.splice(pool.running.indexOf(threadId), 1); //Remove thread from running pool
     	task.workers.splice(task.workers.indexOf(threadId), 1); //Remove thread from task running pool
-      if (pool.pending.length !== 0) { //If work is pending, get it started before doing heavy data merge..keep cpu busy not waiting
-        pool.processQueue(pool.pending.shift(), hamster);
-      } else if (!scope.habitat.persistence && !scope.habitat.webWorker) {
-        hamster.terminate(); //Kill the thread only if no items waiting to run (20-22% performance improvement observed during testing, repurposing threads vs recreating them)
-      }
-      pool.mergeOutputData(task, scope, threadId, results); //Merge results into data array as the thread returns, merge immediately don't wait
-      if (task.workers.length === 0 && task.count === task.threads) { 
-        pool.returnOutputAndRemoveTask(task, resolve);
-      }
+      pool.checkQueueOrKillThread(scope, hamster);
+      pool.processThreadOutput(task, threadId, results, resolve);
     }
     // Handle error response from a thread
     function onThreadError(error) {
@@ -235,23 +274,6 @@ class pool {
       hamster.onmessageerror = onThreadError;
       hamster.onerror = onThreadError;
     }
-  }
-
-  /**
-  * @function scheduleTask - Adds new task to the system for execution
-  * @param {object} task - Provided library functionality options for this task
-  * @param {boolean} persistence - Whether persistence mode is enabled or not
-  * @param {function} wheel - Scaffold to execute login within
-  * @param {number} maxThreads - Maximum number of threads for this client
-  */
-  scheduleTask(task, scope) {
-  	return new Promise((resolve, reject) => {
-      let i = 0;
-      while (i < task.threads) {
-        this.hamsterWheel(i, task, scope, resolve, reject);
-        i += 1;
-      }
-    });
   }
 }
 

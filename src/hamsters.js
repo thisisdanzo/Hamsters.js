@@ -81,34 +81,11 @@ class hamstersjs {
     }
   }
 
-  /**
-  * @constructor
-  * @function hamstersTask - Constructs a new task object from provided arguments
-  * @param {object} params - Provided library execution options
-  * @param {function} functionToRun - Function to execute
-  * @param {object} scope - Reference to main library context
-  * @return {object} new Hamsters.js task
-  */
-  hamstersTask(params, functionToRun, scope) {
-    this.id = scope.pool.tasks.length;
-    this.count = 0;
-    this.aggregate = (params.aggregate || false);
-    this.workers = [];
-    this.memoize = (params.memoize || false);
-    this.dataType = (params.dataType ? params.dataType.toLowerCase() : null);
-    this.params = params;
-    // Do not modify function if we're running on the main thread for legacy fallback
-    this.threads = (scope.habitat.legacy ? 1 : (params.threads || 1));
-    this.hamstersJob = (scope.habitat.legacy ? functionToRun : scope.data.prepareJob(functionToRun));
-    // Determine sub array indexes, precalculate ahead of time so we can pull data only when executing on a thread 
-    this.indexes = scope.data.generateIndexes(this.params.array, this.threads);
-  }
-
   scheduleTask(task, resolve, reject) {
     return this.pool.scheduleTask(task, this).then((results) => {
       resolve(results);
     }).catch((error) => {
-      hamstersLogger.error(error.messsage, reject);
+      hamstersLogger.error(error.message, reject);
     });
   }
 
@@ -121,8 +98,8 @@ class hamstersjs {
   */
   hamstersPromise(params, functionToRun) {
     return new Promise((resolve, reject) => {
-      let task = new this.hamstersTask(params, functionToRun, this);
-      return this.scheduleTask(task, resolve, reject);
+      let task = new hamstersPool.task(params, functionToRun, this, resolve, reject);
+      return this.scheduleTask(task);
     });
   }
 
@@ -136,8 +113,8 @@ class hamstersjs {
   * @return {array} Results from functionToRun.
   */
   hamstersRun(params, functionToRun, onSuccess, onError) {
-    let task = new this.hamstersTask(params, functionToRun, this);
-    return this.scheduleTask(task, onSuccess, onError);
+    let task = new hamstersPool.task(params, functionToRun, this, onSuccess, onError);
+    return this.scheduleTask(task);
   }
 }
 

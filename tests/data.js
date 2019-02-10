@@ -33,15 +33,6 @@ describe("Hamsters Data", () => {
     expect(preparedJob.indexOf('console.log')).not.toBe(-1);
   });
 
-  it("aggregateArrays should aggregate array of subarrays", () => {
-    expect(hamstersData.aggregateArrays([[1],[2]])).toEqual([1,2]);
-  });
-
-  it("splitArrays should split array into subarrays", () => {
-    expect(hamstersData.splitArrays([1,2], 2)).toEqual([[1],[2]]);
-    expect(hamstersData.splitArrays([1,2, 3, 4], 4)).toEqual([[1],[2], [3], [4]]);
-  });
-
   it("createBlob should create dataBlob", () => {
     let dataBlob = hamstersData.createBlob('hamsters just want to have fun');
     expect((typeof dataBlob)).toEqual('object');

@@ -60,22 +60,4 @@ describe("Hamsters Pool", () => {
     expect(typeof pendingWorkItem[4]).toEqual('function');
     expect(typeof pendingWorkItem[5]).toEqual('function');
   });
-
-  it("prepareMeal should construct params object variables", () => {
-    let taskInput = {
-      hamstersJob: `function() { console.log('The world is run by..') }`,
-      array: [1, 2, 3, 4],
-      ranVar: 'hamster powered',
-      dataType: 'Int32'
-    };
-    let task = {
-      id: 1,
-      input: taskInput
-    };
-    let meal = hamstersPool.prepareMeal(taskInput.array, task);
-    expect(typeof meal).toEqual('object');
-    expect(meal.hamstersJob).toEqual(taskInput.hamstersJob);
-    expect(meal.dataType).toEqual('Int32');
-    expect(meal.ranVar).toEqual('hamster powered');
-  });
 });

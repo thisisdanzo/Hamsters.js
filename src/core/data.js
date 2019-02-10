@@ -22,7 +22,6 @@ class data {
   */
   constructor() {
     this.randomArray = this.randomArray;
-    this.aggregateArrays = this.aggregateThreadOutputs;
     this.generateIndexes = this.determineSubArrayIndexes;
     this.createBlob = this.createDataBlob;
     this.generateWorkerBlob = this.generateWorkerBlob;
@@ -38,17 +37,17 @@ class data {
   * @param {worker} hamster - Thread to message
   * @param {object} hamsterFood - Message to send to thread
   */  
-  messageWorker(hamster, hamsterFood, habitat) {
-    if(habitat.reactNative) {
+  messageWorker(hamster, hamsterFood) {
+    if(hamstersHabitat.reactNative) {
       return hamster.postMessage(JSON.stringify(hamsterFood));
     }
-    if (habitat.ie10) {
+    if (hamstersHabitat.ie10) {
       return hamster.postMessage(hamsterFood);
     }
-    if (habitat.webWorker) {
+    if (hamstersHabitat.webWorker) {
       return hamster.port.postMessage(hamsterFood);
     }
-    return hamster.postMessage(hamsterFood, this.prepareTransferBuffers(hamsterFood, habitat.transferrable));
+    return hamster.postMessage(hamsterFood, this.prepareTransferBuffers(hamsterFood, hamstersHabitat.transferrable));
   }
 
   /**
@@ -68,6 +67,25 @@ class data {
       }
     }
     return buffers;
+  }
+
+  /**
+  * @function prepareMeal - Prepares message to send to a thread and invoke execution
+  * @param {object} threadArray - Provided data to execute logic on
+  * @param {object} task - Provided library functionality options for this task
+  * @return {object} hamsterFood - Prepared message to send to a thread
+  */
+  prepareMeal(index, task) {
+    let threadArray = this.getSubArrayUsingIndex(task.params.array, index);
+    let hamsterFood = {
+      array: threadArray
+    };
+    for (var key in task.params) {
+      if (task.params.hasOwnProperty(key) && ['array', 'threads'].indexOf(key) === -1) {
+        hamsterFood[key] = task.params[key];
+      }
+    }
+    return hamsterFood;
   }
 
   /**
@@ -92,6 +110,21 @@ class data {
     let hamsterBlob = this.createDataBlob('(' + String(workerLogic) + ')();');
     let dataBlobURL = URL.createObjectURL(hamsterBlob);
     return dataBlobURL;
+  }
+
+  /**
+  * @function mergeOutputData - Merges output data into data array, using indexes
+  * @param {object} task - Provided library functionality options for this task
+  * @param {number} threadId - Internal use id for this thread
+  * @param {object} results - Message object containing results from thread
+  */
+  mergeOutputData(task, threadId, results) {
+    var data = hamstersHabitat.reactNative ? JSON.parse(results.data) : results.data;
+    var arrayIndex = task.indexes[threadId].start; //Starting value index for subarray to merge
+    for (var i = 0; i < data.length; i++) {
+      task.params.array[arrayIndex] = data[i];
+      arrayIndex++;
+    }
   }
 
   /**
@@ -208,32 +241,6 @@ class data {
       count -= 1;
     }
     onSuccess(randomArray);
-  }
-
-  /**
-  * @function aggregateThreadOutputs - Joins individual thread outputs into single result
-  * @param {array} input - Array of arrays to aggregate
-  * @param {string} dataType - Data type to use for typed array
-  */
-  aggregateThreadOutputs(input, dataType, transferrable) {
-    if(!dataType || !transferrable) {
-      return input.reduce(function(a, b) {
-        return a.concat(b);
-      });
-    }
-    let i = 0;
-    let len = input.length;
-    let bufferLength = 0;
-    for (i; i < len; i += 1) {
-      bufferLength += input[i].length;
-    }
-    let output = this.processDataType(dataType, bufferLength, transferrable);
-    let offset = 0;
-    for (i = 0; i < len; i += 1) {
-      output.set(input[i], offset);
-      offset += input[i].length;
-    }
-    return output;
   }
 
   /**

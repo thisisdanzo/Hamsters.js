@@ -1,6 +1,15 @@
 const path = require('path');
 const webpack = require('webpack');
 
+
+const optimizingPlugins = [
+  new webpack.optimize.OccurrenceOrderPlugin,
+  new webpack.optimize.UglifyJsPlugin({
+      include: /\.min\.js$/,
+      minimize: true
+  }),
+];
+
 const web = {
   target: 'web',
   devtool: 'sourcemap',
@@ -14,7 +23,7 @@ const web = {
     library: 'hamsters',
     libraryTarget: 'var'
   },
-  plugins: webpack.plugins,
+  plugins: optimizingPlugins,
   module: {
     loaders: [
       {
@@ -42,7 +51,7 @@ const node = {
     library: 'hamsters',
     libraryTarget: 'commonjs2'
   },
-  plugins: webpack.plugins,
+  plugins: optimizingPlugins,
   module: {
     loaders: [
       {

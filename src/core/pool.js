@@ -144,6 +144,8 @@ class pool {
     this.indexes = hamstersData.generateIndexes(this.params.array, this.threads);
     this.onSuccess = resolve;
     this.onError = reject;
+    this.createdAt = Date.now();
+    this.completedAt = null;
   }
 
   /**
@@ -197,10 +199,15 @@ class pool {
     if (task.sort) {
       output = hamstersData.sortOutput(output, task.sort);
     }
+    task.completedAt = Date.now();
+    let returnData = {
+      threads: task.threads,
+      createdAt: task.createdAt,
+      completedAt: task.completedAt,
+      results: output
+    };
     this.tasks[task.id] = null; //Clean up our task, not needed any longer
-    resolve({
-      data: output
-    });
+    resolve(returnData);
   }
 
   /**

@@ -39,6 +39,7 @@ class pool {
   * @param {function} reject - onError method
   */
   addWorkToPending(array, task, persistence, wheel, resolve, reject) {
+    task.queuedAt = Date.now(); //Add a timestamp for when this task was put into the pending queue, useful for performance profiling
   	this.pending.push(arguments);
   }
 
@@ -146,6 +147,7 @@ class pool {
     this.onError = reject;
     this.createdAt = Date.now();
     this.completedAt = null;
+    this.queuedAt = null;
   }
 
   /**
@@ -200,16 +202,7 @@ class pool {
       output = hamstersData.sortOutput(output, task.sort);
     }
     task.completedAt = Date.now();
-    let returnData = {
-      threads: task.threads,
-      dataType: task.dataType,
-      memoize: task.memoize,
-      indexes: task.indexes,
-      aggregate: task.aggregate,
-      createdAt: task.createdAt,
-      completedAt: task.completedAt,
-      results: output
-    };
+    let returnData = hamstersData.generateReturnObject(task, output);
     this.tasks[task.id] = null; //Clean up our task, not needed any longer
     resolve(returnData);
   }

@@ -147,6 +147,25 @@ class data {
     return task.params.array;
   }
 
+
+  /**
+  * @function generateReturnObject - Creates output result object including useful runtime info
+  * @param {task} buffer - Task to prepare output for
+  * @param {task} buffer - Final task output data
+  */
+  generateReturnObject(task, output) {
+    return {
+      threads: task.threads,
+      dataType: task.dataType,
+      memoize: task.memoize,
+      indexes: task.indexes,
+      aggregate: task.aggregate,
+      createdAt: task.createdAt,
+      completedAt: task.completedAt,
+      queuedAt: task.queuedAt,
+      results: output
+    };
+  }
   /**
   * @function sortArray - Sorts array by defined order
   * @param {object} arr - Array to sort

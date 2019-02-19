@@ -50,6 +50,23 @@ export default class task {
 	}
 
 	/**
+	* @function scheduleTask - Adds new task to the system for execution
+	* @param {object} task - Provided library functionality options for this task
+	* @param {boolean} persistence - Whether persistence mode is enabled or not
+	* @param {function} wheel - Scaffold to execute login within
+	* @param {number} maxThreads - Maximum number of threads for this client
+	*/
+	schedule() {
+		return new Promise((resolve, reject) => {
+		  let i = 0;
+		  while (i < task.threads) {
+		    this.hamsterWheel(i, this, resolve, reject);
+		    i += 1;
+		  }
+		});
+	}
+
+	/**
 	* @function hamsterWheel - Runs function using thread
 	* @param {object} array - Provided data to execute logic on
 	* @param {object} task - Provided library functionality options for this task

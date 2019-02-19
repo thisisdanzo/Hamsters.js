@@ -95,4 +95,39 @@ export default class message {
     return functionBody;
   }
 
+  
+  /**
+  * @function trainHamster - Trains thread in how to behave
+  * @param {number} threadId - Internal use id for this thread
+  * @param {object} task - Provided library functionality options for this task
+  * @param {worker} hamster - Thread to train
+  * @param {function} resolve - onSuccess method
+  * @param {function} reject - onError method
+  */
+  trainHamster(threadId, task, hamster, scope, resolve, reject) {
+    let pool = this;
+    // Handle successful response from a thread
+    function onThreadResponse(message) {
+      let results = message.data;
+      pool.running.splice(pool.running.indexOf(threadId), 1); //Remove thread from running pool
+      task.workers.splice(task.workers.indexOf(threadId), 1); //Remove thread from task running pool
+      pool.checkQueueOrKillThread(scope, hamster);
+      pool.processThreadOutput(task, threadId, results, resolve);
+    }
+    // Handle error response from a thread
+    function onThreadError(error) {
+      logger.errorFromThread(error, reject);
+    }
+    // Register on message/error handlers
+    if (habitat.webWorker) {
+      hamster.port.onmessage = onThreadResponse;
+      hamster.port.onmessageerror = onThreadError;
+      hamster.port.onerror = onThreadError;
+    } else {
+      hamster.onmessage = onThreadResponse;
+      hamster.onmessageerror = onThreadError;
+      hamster.onerror = onThreadError;
+    }
+  }
+
 }

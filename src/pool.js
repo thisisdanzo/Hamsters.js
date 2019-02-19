@@ -44,7 +44,7 @@ export default class pool {
   * @return {object} WebWorker - New WebWorker thread using selected scaffold
   */
   createThread() {
-    let newWheel = hamstersHabitat.selectHamsterWheel();
+    let newWheel = this.selectHamsterWheel();
     if (hamstersHabitat.webWorker) {
       return new hamstersHabitat.SharedWorker(newWheel, 'SharedHamsterWheel');
     }
@@ -62,6 +62,50 @@ export default class pool {
       return this.threads[threadId];
     }
     return this.spawnHamster();
+  }
+
+  /**
+  * @function scheduleTask - Determines which scaffold to use for proper execution for various environments
+  */
+  selectHamsterWheel() {
+    if(habitat.reactNative) {
+      return './scaffold/reactNative.js';
+    }
+    if(habitat.webWorker) {
+      return './scaffold/sharedWorker.js';
+    }
+    return './scaffold/regular.js';
+  }
+
+  /**
+  * @function returnOutputAndRemoveTask - gathers thread outputs into final result
+  * @param {object} task - Provided library functionality options for this task
+  * @param {function} resolve - onSuccess method
+  */
+  returnOutputAndRemoveTask(task, resolve) {
+    let output = data.getOutput(task);
+    if (task.sort) {
+      output = data.sortOutput(output, task.sort);
+    }
+    task.completedAt = Date.now();
+    let returnData = data.generateReturnObject(task, output);
+    this.tasks[task.id] = null; //Clean up our task, not needed any longer
+    resolve(returnData);
+  }
+
+
+  /**
+  * @function processThreadOutput - Handles output data from thread
+  * @param {object} task - Provided library functionality options for this task
+  * @param {number} threadId - Internal use id for this thread
+  * @param {worker} hamster - Thread to train
+  * @param {function} resolve - onSuccess method
+  */
+  processThreadOutput(task, threadId, results, resolve) {
+    data.mergeOutputData(task, threadId, results); //Merge results into data array as the thread returns, merge immediately don't wait
+    if (task.workers.length === 0 && task.count === task.threads) { 
+      this.returnOutputAndRemoveTask(task, resolve);
+    }
   }
 
 }

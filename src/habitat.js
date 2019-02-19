@@ -26,7 +26,6 @@ export default class habitat {
     this.memoize = false;
     this.persistence = true;
     this.legacy = this.isLegacyEnvironment();
-    this.legacyWheel = hamstersWheel.legacy,
     this.browser = this.isBrowser();
     this.webWorker = this.isWebWorker();
     this.node = this.isNode();
@@ -39,7 +38,6 @@ export default class habitat {
     this.logicalThreads = this.determineGlobalThreads();
     this.Worker = this.locateWorkerObject();
     this.sharedWorker = this.locateSharedWorkerObject();
-    this.selectHamsterWheel = this.selectHamsterWheel;
   }
 
   /**
@@ -172,18 +170,5 @@ export default class habitat {
   */
   supportsProxies() {
     return typeof Proxy !== 'undefined';
-  }
-
-  /**
-  * @function scheduleTask - Determines which scaffold to use for proper execution for various environments
-  */
-  selectHamsterWheel() {
-    if(this.reactNative) {
-      return './scaffold/reactNative.js';
-    }
-    if(this.webWorker) {
-      return './scaffold/sharedWorker.js';
-    }
-    return './scaffold/regular.js';
   }
 }

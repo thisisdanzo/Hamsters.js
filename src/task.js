@@ -32,12 +32,44 @@ export default class task {
 	    this.threads = (habitat.legacy ? 1 : (params.threads || 1));
 	    this.hamstersJob = (habitat.legacy ? functionToRun : data.prepareJob(functionToRun));
 	    // Determine sub array indexes, precalculate ahead of time so we can pull data only when executing on a thread 
-	    this.indexes = data.generateIndexes(this.params.array, this.threads);
+	    this.indexes = this.createArrayIndexes();
 	    this.onSuccess = resolve;
 	    this.onError = reject;
 	    this.createdAt = Date.now();
 	    this.completedAt = null;
 	    this.queuedAt = null;
+	}
+
+	createArrayIndexes() {
+		//If we aren't dealing with an array we dont have any indexes to compute
+		//Additionally if we are only dealing with 1 thread this is a waste of time
+		if(typeof this.params.array !== 'undefined' && this.threads > 1) {
+			return data.generateIndexes(this.params.array, this.threads);
+		}
+		return [];
+	}
+
+	/**
+	* @function hamsterWheel - Runs function using thread
+	* @param {object} array - Provided data to execute logic on
+	* @param {object} task - Provided library functionality options for this task
+	* @param {boolean} persistence - Whether persistence mode is enabled or not
+	* @param {function} wheel - Results from select hamster wheel
+	* @param {function} resolve - onSuccess method
+	* @param {function} reject - onError method
+	*/
+	run(hamster, index, resolve, reject) {
+		let threadId = pool.running.length;
+		let hamsterFood = data.prepareMeal(index, this);
+		this.registerTask(this.id);
+		this.keepTrackOfThread(this, threadId);
+		if(habitat.legacy) {
+			legacy.run(hamsterFood, resolve, reject);
+		} else {
+		  	pool.trainHamster(this.count, this, hamster, resolve, reject);
+		  	data.feedHamster(hamster, hamsterFood, habitat);
+		}
+		this.count += 1; //Increment count, thread is running
 	}
 
 }

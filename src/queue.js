@@ -18,14 +18,49 @@ export default class queue {
 	*/
 	constructor(interval) {
 		this.tickInterval = interval || 4; //Default is 4ms (HTML5 spec minimum)
+		this.tasks = [];
 		this.running = [];
 		this.pending = [];
+		this.tick();
 	}
 
 	checkQueue() {
-		if (this.pending.length !== 0) { //If work is pending, get it started before doing heavy data merge..keep cpu busy not waiting
+		if (this.pending.length !== 0 && pool.running !== maxThreads) { //If work is pending and we have an available thread, get it started
 			this.processQueuedItem(this.pending.shift());
 		}
+	}
+
+
+	/**
+	* @function keepTrackOfThread - Keeps track of threads running, scoped globally and to task
+	* @param {object} task - Provided library functionality options for this task
+	* @param {number} id - Id of thread to track
+	*/
+	keepTrackOfThread(task, id) {
+		task.workers.push(id); //Keep track of threads scoped to current task
+		this.running.push(id); //Keep track of all currently running threads
+	}
+
+	/**
+	* @function registerTask - Adds task to execution pool based on id
+	* @param {number} id - Id of task to register
+	*/
+	registerTask(id) {
+		this.tasks.push(id);
+	}
+
+	/**
+	* @function grabHamster - Adds task to queue waiting for available thread
+	* @param {object} array - Provided data to execute logic on
+	* @param {object} task - Provided library functionality options for this task
+	* @param {boolean} persistence - Whether persistence mode is enabled or not
+	* @param {function} wheel - Results from select hamster wheel
+	* @param {function} resolve - onSuccess method
+	* @param {function} reject - onError method
+	*/
+	addToPending(array, task, persistence, wheel, resolve, reject) {
+		task.queuedAt = Date.now(); //Add a timestamp for when this task was put into the pending queue, useful for performance profiling
+		this.pending.push(arguments);
 	}
 
 	/**

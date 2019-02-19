@@ -14,7 +14,9 @@
 import version from './version';
 import habitat from './habitat';
 import pool from './pool';
+import queue from './queue';
 import data from './data';
+import task from './task';
 import logger from './logger';
 
 export default class hamstersjs {
@@ -24,14 +26,14 @@ export default class hamstersjs {
   * @function constructor - Sets properties for this class
   */
   constructor() {
-    this.version = hamstersVersion;
-    this.maxThreads = hamstersHabitat.logicalThreads;
-    this.habitat = hamstersHabitat;
-    this.data = hamstersData;
-    this.pool = hamstersPool;
-    this.logger = hamstersLogger;
-    this.run = this.hamstersRun;
-    this.promise = this.hamstersPromise;
+    this.version = version.current();
+    this.maxThreads = habitat.logicalThreads;
+    this.habitat = habitat;
+    this.data = data;
+    this.pool = pool;
+    this.logger = logger;
+    this.run = this.runTaskUsingCallback;
+    this.promise = this.runTaskUsingPromise;
     this.init = this.initializeLibrary;
   }
 
@@ -79,6 +81,43 @@ export default class hamstersjs {
     }
   }
 
+
+  /**
+  * @async
+  * @function hamstersPromise - Calls library functionality using async promises
+  * @param {object} params - Provided library execution options
+  * @param {function} functionToRun - Function to execute
+  * @return {array} Results from functionToRun.
+  */
+  runTaskUsingPromise(params, functionToRun) {
+    return new Promise((resolve, reject) => {
+      let task = new task(params, functionToRun, this, resolve, reject);
+      pool.scheduleTask(task, this).then((results) => {
+        task.onSuccess(results);
+      }).catch((error) => {
+        logger.error(error.message, task.onError);
+      });
+    });
+  }
+
+  /**
+  * @async
+  * @function hamstersRun - Calls library functionality using async callbacks
+  * @param {object} params - Provided library execution options
+  * @param {function} functionToRun - Function to execute
+  * @param {function} onSuccess - Function to call upon successful execution
+  * @param {function} onError - Function to call upon execution failure
+  * @return {array} Results from functionToRun.
+  */
+  runTaskUsingCallback(params, functionToRun, onSuccess, onError) {
+    let task = new task(params, functionToRun, this, onSuccess, onError);
+    pool.scheduleTask(task, this).then((results) => {
+      task.onSuccess(results);
+    }).catch((error) => {
+      logger.error(error.message, task.onError);
+    });
+  }
+
     /**
   * @function scheduleTask - Adds new task to the system for execution
   * @param {object} task - Provided library functionality options for this task
@@ -108,10 +147,10 @@ export default class hamstersjs {
   */
   hamsterWheel(thread, task, resolve, reject) {
     let index = task.indexes[thread];
-    if(scope.maxThreads === this.running.length) {
+    if(this.maxThreads === pool.running.length) {
       return this.addWorkToPending(index, resolve, reject);
     }
-    let hamster = this.grabHamster(this.running.length, habitat);
+    let hamster = pool.fetchHamster(pool.running.length, habitat);
     task.run(hamster, index, resolve, reject);
   }
 
@@ -121,12 +160,12 @@ export default class hamstersjs {
   * @param {function} resolve - onSuccess method
   */
   returnOutputAndRemoveTask(task, resolve) {
-    let output = hamstersData.getOutput(task);
+    let output = data.getOutput(task);
     if (task.sort) {
-      output = hamstersData.sortOutput(output, task.sort);
+      output = data.sortOutput(output, task.sort);
     }
     task.completedAt = Date.now();
-    let returnData = hamstersData.generateReturnObject(task, output);
+    let returnData = data.generateReturnObject(task, output);
     this.tasks[task.id] = null; //Clean up our task, not needed any longer
     resolve(returnData);
   }
@@ -140,7 +179,7 @@ export default class hamstersjs {
   * @param {function} resolve - onSuccess method
   */
   processThreadOutput(task, threadId, results, resolve) {
-    hamstersData.mergeOutputData(task, threadId, results); //Merge results into data array as the thread returns, merge immediately don't wait
+    data.mergeOutputData(task, threadId, results); //Merge results into data array as the thread returns, merge immediately don't wait
     if (task.workers.length === 0 && task.count === task.threads) { 
       this.returnOutputAndRemoveTask(task, resolve);
     }
@@ -166,10 +205,10 @@ export default class hamstersjs {
     }
     // Handle error response from a thread
     function onThreadError(error) {
-      hamstersLogger.errorFromThread(error, reject);
+      logger.errorFromThread(error, reject);
     }
     // Register on message/error handlers
-    if (hamstersHabitat.webWorker) {
+    if (habitat.webWorker) {
       hamster.port.onmessage = onThreadResponse;
       hamster.port.onmessageerror = onThreadError;
       hamster.port.onerror = onThreadError;
@@ -178,44 +217,6 @@ export default class hamstersjs {
       hamster.onmessageerror = onThreadError;
       hamster.onerror = onThreadError;
     }
-  }
-
-
-
-  /**
-  * @async
-  * @function hamstersPromise - Calls library functionality using async promises
-  * @param {object} params - Provided library execution options
-  * @param {function} functionToRun - Function to execute
-  * @return {array} Results from functionToRun.
-  */
-  hamstersPromise(params, functionToRun) {
-    return new Promise((resolve, reject) => {
-      let task = new pool.task(params, functionToRun, this, resolve, reject);
-      pool.scheduleTask(task, this).then((results) => {
-        task.onSuccess(results);
-      }).catch((error) => {
-        logger.error(error.message, task.onError);
-      });
-    });
-  }
-
-  /**
-  * @async
-  * @function hamstersRun - Calls library functionality using async callbacks
-  * @param {object} params - Provided library execution options
-  * @param {function} functionToRun - Function to execute
-  * @param {function} onSuccess - Function to call upon successful execution
-  * @param {function} onError - Function to call upon execution failure
-  * @return {array} Results from functionToRun.
-  */
-  hamstersRun(params, functionToRun, onSuccess, onError) {
-    let task = new pool.task(params, functionToRun, this, onSuccess, onError);
-    pool.scheduleTask(task, this).then((results) => {
-      task.onSuccess(results);
-    }).catch((error) => {
-      logger.error(error.message, task.onError);
-    });
   }
 }
 

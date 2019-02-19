@@ -178,18 +178,12 @@ export default class habitat {
   * @function scheduleTask - Determines which scaffold to use for proper execution for various environments
   */
   selectHamsterWheel() {
-    if(this.isIE10) {
-      return './common/hamstersWheel.js';
-    }
     if(this.reactNative) {
-      return './common/rnHamstersWheel.js';
+      return './scaffold/reactNative.js';
     }
     if(this.webWorker) {
-      return hamstersWheel.worker;
+      return './scaffold/sharedWorker.js';
     }
-    if (this.node) {
-      return hamstersWheel.regular;
-    }
-    return hamstersData.generateWorkerBlob(hamstersWheel.regular);
+    return './scaffold/regular.js';
   }
 }

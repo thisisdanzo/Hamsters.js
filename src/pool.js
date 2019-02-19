@@ -24,8 +24,6 @@ export default class pool {
   constructor() {
     this.tasks = [];
     this.threads = [];
-    this.running = [];
-    this.pending = [];
     this.fetchHamster = this.grabHamster;
   }
 
@@ -120,34 +118,6 @@ export default class pool {
       return new hamstersHabitat.SharedWorker(newWheel, 'SharedHamsterWheel');
     }
     return new hamstersHabitat.Worker(newWheel);
-  }
-
-  /**
-  * @constructor
-  * @function task - Constructs a new task object from provided arguments
-  * @param {object} params - Provided library execution options
-  * @param {function} functionToRun - Function to execute
-  * @param {object} scope - Reference to main library context
-  * @return {object} new Hamsters.js task
-  */
-  task(params, functionToRun, scope, resolve, reject) {
-    this.id = scope.pool.tasks.length;
-    this.count = 0;
-    this.aggregate = (params.aggregate || false);
-    this.workers = [];
-    this.memoize = (params.memoize || false);
-    this.dataType = (params.dataType ? params.dataType.toLowerCase() : null);
-    this.params = params;
-    // Do not modify function if we're running on the main thread for legacy fallback
-    this.threads = (scope.habitat.legacy ? 1 : (params.threads || 1));
-    this.hamstersJob = (scope.habitat.legacy ? functionToRun : hamstersData.prepareJob(functionToRun));
-    // Determine sub array indexes, precalculate ahead of time so we can pull data only when executing on a thread 
-    this.indexes = hamstersData.generateIndexes(this.params.array, this.threads);
-    this.onSuccess = resolve;
-    this.onError = reject;
-    this.createdAt = Date.now();
-    this.completedAt = null;
-    this.queuedAt = null;
   }
 
   /**

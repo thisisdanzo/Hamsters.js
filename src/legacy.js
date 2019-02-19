@@ -18,7 +18,7 @@ export default class legacy {
   * @function constructor - Sets properties for this class
   */
   constructor() {
-    this.scaffold = this.legacyScaffold;
+    this.run = this.legacyScaffold;
   }
 
   /**

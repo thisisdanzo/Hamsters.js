@@ -9,9 +9,8 @@
 * License: Artistic License 2.0                                                    *
 ***********************************************************************************/
 
-'use strict';
-
 (function() {
+
   'use strict';
 
   if(typeof self === 'undefined') {

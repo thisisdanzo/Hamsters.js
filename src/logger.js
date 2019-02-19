@@ -11,20 +11,19 @@
 
 'use strict';
 
-import hamstersVersion from './version';
-
-class logger {
+export default class logger {
 
   /**
   * @constructor
   * @function constructor - Sets properties for this class
   */
-  constructor() {
+  constructor(version) {
     this.logBook = {
       error: [], 
       warning: [], 
       info: []
     };
+    this.hamstersVersion = version;
     this.info = this.infoLog;
     this.warning = this.warningLog;
     this.error = this.errorLog;
@@ -115,10 +114,4 @@ class logger {
       results: finalResults
     };
   }   
-}
-
-var hamstersLogger = new logger();
-
-if(typeof module !== 'undefined' && typeof module.exports !== 'undefined') {
-  module.exports = hamstersLogger;
 }

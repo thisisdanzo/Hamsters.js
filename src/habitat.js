@@ -14,7 +14,7 @@
 import hamstersData from './data';
 import hamstersWheel from './wheel';
 
-class habitat {
+export default class habitat {
 
   /**
   * @constructor
@@ -192,10 +192,4 @@ class habitat {
     }
     return hamstersData.generateWorkerBlob(hamstersWheel.regular);
   }
-}
-
-var hamstersHabitat = new habitat();
-
-if(typeof module !== 'undefined' && typeof module.exports !== 'undefined') {
-  module.exports = hamstersHabitat;
 }

@@ -15,7 +15,7 @@ import hamstersData from './data';
 import hamstersHabitat from './habitat';
 import hamstersLogger from './logger';
 
-class pool {
+export default class pool {
 	
   /**
   * @constructor
@@ -271,10 +271,4 @@ class pool {
       hamster.onerror = onThreadError;
     }
   }
-}
-
-var hamsterPool = new pool();
-
-if(typeof module !== 'undefined' && typeof module.exports !== 'undefined') {
-  module.exports = hamsterPool;
 }

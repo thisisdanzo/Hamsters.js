@@ -11,14 +11,13 @@
 
 'use strict';
 
-import hamstersVersion from './core/version';
-import hamstersHabitat from './core/habitat';
-import hamstersPool from './core/pool';
-import hamstersData from './core/data';
-import hamstersLogger from './core/logger';
-import hamstersMemoizer from './core/memoizer';
+import version from './version';
+import habitat from './habitat';
+import pool from './pool';
+import data from './data';
+import logger from './logger';
 
-class hamstersjs {
+export default class hamstersjs {
 
   /**
   * @constructor
@@ -31,7 +30,6 @@ class hamstersjs {
     this.data = hamstersData;
     this.pool = hamstersPool;
     this.logger = hamstersLogger;
-    this.memoizer = hamstersMemoizer;
     this.run = this.hamstersRun;
     this.promise = this.hamstersPromise;
     this.init = this.initializeLibrary;
@@ -46,9 +44,9 @@ class hamstersjs {
       this.processStartOptions(startOptions);
     }
     if(!this.habitat.legacy && this.habitat.persistence === true) {
-      hamstersPool.spawnHamsters(this.maxThreads);
+      pool.spawnHamsters(this.maxThreads);
     }
-    this.logger.info(`Initialized using up to ${this.maxThreads} threads.`);
+    logger.info(`Initialized using up to ${this.maxThreads} threads.`);
     delete this.init;
   }
 
@@ -92,11 +90,11 @@ class hamstersjs {
   */
   hamstersPromise(params, functionToRun) {
     return new Promise((resolve, reject) => {
-      let task = new hamstersPool.task(params, functionToRun, this, resolve, reject);
-      hamstersPool.scheduleTask(task, this).then((results) => {
+      let task = new pool.task(params, functionToRun, this, resolve, reject);
+      pool.scheduleTask(task, this).then((results) => {
         task.onSuccess(results);
       }).catch((error) => {
-        hamstersLogger.error(error.message, task.onError);
+        logger.error(error.message, task.onError);
       });
     });
   }
@@ -111,17 +109,15 @@ class hamstersjs {
   * @return {array} Results from functionToRun.
   */
   hamstersRun(params, functionToRun, onSuccess, onError) {
-    let task = new hamstersPool.task(params, functionToRun, this, onSuccess, onError);
-    hamstersPool.scheduleTask(task, this).then((results) => {
+    let task = new pool.task(params, functionToRun, this, onSuccess, onError);
+    pool.scheduleTask(task, this).then((results) => {
       task.onSuccess(results);
     }).catch((error) => {
-      hamstersLogger.error(error.message, task.onError);
+      logger.error(error.message, task.onError);
     });
   }
 }
 
-var hamsters = new hamstersjs();
 
-if (typeof module !== 'undefined' && typeof module.exports !== 'undefined') {
-  module.exports = hamsters;
-}
+//Expose library class
+let hamsters = new hamstersjs();

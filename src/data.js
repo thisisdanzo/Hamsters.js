@@ -14,7 +14,7 @@
 import hamstersHabitat from './habitat';
 import hamstersLogger from './logger';
 
-class data {
+export default class data {
 
   /**
   * @constructor
@@ -288,10 +288,4 @@ class data {
     }
     return array.subarray(index['start'], index['end']);
   }
-}
-
-var hamstersData = new data();
-
-if(typeof module !== 'undefined' && typeof module.exports !== 'undefined') {
-  module.exports = hamstersData;
 }

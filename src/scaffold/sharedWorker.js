@@ -11,11 +11,30 @@
 
 'use strict';
 
-const majorVersion = 5;
-const minorVersion = 1;
-const patchVersion = 3;
-const hamstersVersion = `${majorVersion}.${minorVersion}.${patchVersion}`;
+(function() {
+  'use strict';
 
-if(typeof module !== 'undefined' && typeof module.exports !== 'undefined') {
-  module.exports = hamstersVersion;
-}
+  if(typeof self === 'undefined') {
+    self = (global || window || this);
+  }
+
+  self.params = {};
+  self.rtn = {};
+
+  addEventListener('connect', (incomingConnection) => {
+    const port = incomingConnection.ports[0];
+    port.start();
+    port.addEventListener('message', (incomingMessage) => {
+      params = incomingMessage.data;
+      rtn = {
+        data: [],
+        dataType: params.dataType
+      };
+      if(params.importScripts) {
+        self.importScripts(params.importScripts);
+      }
+      eval("(" + params.hamstersJob + ")")();
+      port.postMessage(rtn);
+    }, false);
+  }, false);
+}());

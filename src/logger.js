@@ -9,109 +9,93 @@
 * License: Artistic License 2.0                                                    *
 ***********************************************************************************/
 
+import { version } from './version';
+
 'use strict';
 
-export default class logger {
+export const logBook = {
+  error: [], 
+  warning: [], 
+  info: []
+};
 
-  /**
-  * @constructor
-  * @function constructor - Sets properties for this class
-  */
-  constructor(version) {
-    this.logBook = {
-      error: [], 
-      warning: [], 
-      info: []
-    };
-    this.hamstersVersion = version;
-    this.info = this.infoLog;
-    this.warning = this.warningLog;
-    this.error = this.errorLog;
-    this.errorFromThread = this.errorFromThread;
-    this.saveLogEntry = this.saveToLogBook;
-    this.getLogEntries = this.fetchLogBook;
-    this.createAndSaveStampedMessage = this.generateTimeStampedMessage;
-    this.searchLogEntries = this.searchLogBook;
+export function searchLogBook(searchString, eventType) {
+  let finalResults = [];
+  if(eventType) {
+    finalResults = findStringInLogBook(logBook[eventType], searchString);
+  } else {
+    finalResults = findStringInLogBookAllTypes(logBook, searchString);
   }
+  return {
+    total: finalResults.length,
+    results: finalResults
+  };
+};
 
-  infoLog(message) {
-    let timeStampedMessage = this.createAndSaveStampedMessage('Info', message);
-    console.info(timeStampedMessage);
+export function infoLog(message) {
+  let timeStampedMessage = generateTimeStampedMessage('Info', message);
+  console.info(timeStampedMessage);
+};
+
+export function warningLog(message) {
+  let timeStampedMessage = generateTimeStampedMessage('Warning', message);
+  console.warn(timeStampedMessage);
+};
+
+export function errorLog(message, reject) {
+  let timeStampedMessage = generateTimeStampedMessage('Error', message);
+  console.error(timeStampedMessage);
+  if(reject) {
+    reject(timeStampedMessage);
+  } else {
+    return timeStampedMessage;
   }
+};
 
-  warningLog(message) {
-    let timeStampedMessage = this.createAndSaveStampedMessage('Warning', message);
-    console.warn(timeStampedMessage);
+export function errorFromThread(error, reject) {
+  let errorMessage = `#${error.lineno} in ${error.filename}: ${error.message}`;
+  errorLog(errorMessage, reject);
+};
+
+export function generateTimeStampedMessage(type, message) {
+  let record = `Hamsters.js v${version} ${type}: ${message} @ ${Date.now()}`
+  saveToLogBook(type.toLowerCase(), record);
+  return record;
+};
+
+function saveToLogBook(eventType, message) {
+  logBook[eventType].push(message);
+};
+
+function fetchLogBook(eventType) {
+  if(eventType) {
+    return logBook[eventType];
   }
+  return logBook;
+};
 
-  errorLog(message, reject) {
-    let timeStampedMessage = this.createAndSaveStampedMessage('Error', message);
-    console.error(timeStampedMessage);
-    if(reject) {
-      reject(timeStampedMessage);
-    } else {
-      return timeStampedMessage;
+function findStringInLogBook(logBookEntries, searchString) {
+  let searchResults = [];
+  let i = 0;
+  for (i; i < logBookEntries.length; i++) {
+    if(logBookEntries[i].indexOf(searchString) !== -1) {
+      searchResults.push(logBookEntries[i]);
     }
   }
+  return searchResults;
+};
 
-  generateTimeStampedMessage(type, message) {
-    let record = `Hamsters.js v${hamstersVersion} ${type}: ${message} @ ${Date.now()}`
-    this.saveLogEntry(type.toLowerCase(), record);
-    return record;
-  }
-
-  errorFromThread(error, reject) {
-    let errorMessage = `#${error.lineno} in ${error.filename}: ${error.message}`;
-    this.errorLog(errorMessage, reject);
-  }
-
-  saveToLogBook(eventType, message) {
-    this.logBook[eventType].push(message);
-  }
-
-  fetchLogBook(eventType) {
-    if(eventType) {
-      return this.logBook[eventType];
-    }
-    return this.logBook;
-  }
-
-  findStringInLogBook(logBookEntries, searchString) {
-    let searchResults = [];
-    let i = 0;
-    for (i; i < logBookEntries.length; i++) {
-      if(logBookEntries[i].indexOf(searchString) !== -1) {
-        searchResults.push(logBookEntries[i]);
+function findStringInLogBookAllTypes(logBook, searchString) {
+  let searchResults = [];
+  let key, eventTypeResults, tmpEntries = null;
+  for(key in logBook) {
+    if(logBook.hasOwnProperty(key)) {
+      tmpEntries = logBook[key];
+      eventTypeResults = findStringInLogBook(tmpEntries, searchString);
+      for (var i = eventTypeResults.length - 1; i >= 0; i--) {
+        searchResults.push(eventTypeResults[i])
       }
     }
-    return searchResults;
   }
-
-  findStringInLogBookAllTypes(logBook, searchString) {
-    let searchResults = [];
-    let key, eventTypeResults, tmpEntries = null;
-    for(key in logBook) {
-      if(logBook.hasOwnProperty(key)) {
-        tmpEntries = logBook[key];
-        eventTypeResults = this.findStringInLogBook(tmpEntries, searchString);
-        for (var i = eventTypeResults.length - 1; i >= 0; i--) {
-          searchResults.push(eventTypeResults[i])
-        }
-      }
-    }
-    return searchResults;
-  }
-
-  searchLogBook(searchString, eventType) {
-    let finalResults = [];
-    if(eventType) {
-      finalResults = this.findStringInLogBook(this.logBook[eventType], searchString);
-    } else {
-      finalResults = this.findStringInLogBookAllTypes(this.logBook, searchString);
-    }
-    return {
-      total: finalResults.length,
-      results: finalResults
-    };
-  }   
-}
+  return searchResults;
+};

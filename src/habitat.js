@@ -12,7 +12,6 @@
 'use strict';
 
 import hamstersData from './data';
-import hamstersWheel from './wheel';
 
 export default class habitat {
 

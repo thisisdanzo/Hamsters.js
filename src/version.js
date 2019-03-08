@@ -11,15 +11,7 @@
 
 'use strict';
 
-export default class version {
-
-	constructor() {
-		this.majorVersion = 5;
-		this.minorVersion = 1;
-		this.patchVersion = 3;
-	}
-
-	current() {
-		return `${majorVersion}.${minorVersion}.${patchVersion}`;
-	}
-}
+const major = 5;
+const minor = 1;
+const patch = 3;
+export const version = `${major}.${minor}.${patch}`;

@@ -9,105 +9,115 @@
 * License: Artistic License 2.0                                                    *
 ***********************************************************************************/
 
-import hamstersLogger from '../src/core/logger';
+import {
+  infoLog, 
+  warningLog, 
+  errorLog,
+  logBook,
+  searchLogBook,
+  generateTimeStampedMessage
+} from '../src/logger';
 
 describe("Hamsters Logger", () => {
 
   it("LogBook should be an object", () => {
-    expect(typeof hamstersLogger.logBook).toEqual('object');
+    expect(typeof logBook).toEqual('object');
   });
 
-  it("LogBook Errors should be an array", () => {
-    expect(typeof hamstersLogger.logBook.error).toEqual('object');
-    expect(hamstersLogger.logBook.error.length).toEqual(1);
+  it("LogBook Errors should be a non empty array", () => {
+    expect(typeof logBook.error).toEqual('object');
+    expect(Array.isArray(logBook.error)).toEqual(true);
+    expect(logBook.error.length).toEqual(1);
   });
 
   it("LogBook Warning should be an empty array", () => {
-    expect(hamstersLogger.logBook.warning).toEqual([]);
-    expect(hamstersLogger.logBook.warning.length).toEqual(0);
+    expect(typeof logBook.warning).toEqual('object');
+    expect(Array.isArray(logBook.warning)).toEqual(true);
+    expect(logBook.warning.length).toEqual(0);
   });
 
   it("LogBook Info should be an empty array", () => {
-    expect(hamstersLogger.logBook.info).toEqual([]);
-    expect(hamstersLogger.logBook.info.length).toEqual(0);
+    expect(typeof logBook.info).toEqual('object');
+    expect(Array.isArray(logBook.info)).toEqual(true);
+    expect(logBook.info.length).toEqual(0);
   });
 
   it("LogBook Error should save to error array", () => {
-    expect(hamstersLogger.logBook.error.length).toEqual(1);
-    hamstersLogger.error('Pay no mind to the hamster behind the curtain');
-    expect(hamstersLogger.logBook.error.length).toEqual(2);
+    expect(logBook.error.length).toEqual(1);
+    errorLog('Pay no mind to the hamster behind the curtain');
+    expect(logBook.error.length).toEqual(2);
   });
 
   it("LogBook Info should save to info array", () => {
-    expect(hamstersLogger.logBook.info.length).toEqual(0);
-    hamstersLogger.info('The hamster we need but dont deserve');
-    expect(hamstersLogger.logBook.info.length).toEqual(1);
+    expect(logBook.info.length).toEqual(0);
+    infoLog('The hamster we need but dont deserve');
+    expect(logBook.info.length).toEqual(1);
   });
 
   it("LogBook Warning should save to warning array", () => {
-    expect(hamstersLogger.logBook.warning.length).toEqual(0);
-    hamstersLogger.warning('One hamster to rule them all');
-    expect(hamstersLogger.logBook.warning.length).toEqual(1);
+    expect(logBook.warning.length).toEqual(0);
+    warningLog('One hamster to rule them all');
+    expect(logBook.warning.length).toEqual(1);
   });
 
   it("CreateAndSaveStampedMessage should generate a time stamped message for info type", () => {
-    let timeStampedMessage = hamstersLogger.createAndSaveStampedMessage('info', 'One hamster at a time');
+    let timeStampedMessage = generateTimeStampedMessage('info', 'One hamster at a time');
     expect(timeStampedMessage).toContain('Hamsters.js');
     expect(timeStampedMessage).toContain('info');
     expect(timeStampedMessage).toContain('One hamster at a time');
   });
 
   it("CreateAndSaveStampedMessage should generate a time stamped message for warning type", () => {
-    let timeStampedMessage = hamstersLogger.createAndSaveStampedMessage('warning', 'Some hamsters do an awful lot of talking without a brain');
+    let timeStampedMessage = generateTimeStampedMessage('warning', 'Some hamsters do an awful lot of talking without a brain');
     expect(timeStampedMessage).toContain('Hamsters.js');
     expect(timeStampedMessage).toContain('warning');
     expect(timeStampedMessage).toContain('Some hamsters do an awful lot of talking without a brain');
   });
 
   it("CreateAndSaveStampedMessage should generate a time stamped message for error type", () => {
-    let timeStampedMessage = hamstersLogger.createAndSaveStampedMessage('error', 'Hamsters rule the world');
+    let timeStampedMessage = generateTimeStampedMessage('error', 'Hamsters rule the world');
     expect(timeStampedMessage).toContain('Hamsters.js');
     expect(timeStampedMessage).toContain('error');
     expect(timeStampedMessage).toContain('Hamsters rule the world');
   });
 
   it("Search log book should return results for error event", () => {
-    let savedMessageObject = hamstersLogger.searchLogBook('Hamsters rule', 'error');
+    let savedMessageObject = searchLogBook('Hamsters rule', 'error');
     expect(typeof savedMessageObject).toEqual('object');
     expect(savedMessageObject.total).toEqual(1);
     expect(savedMessageObject.results[0]).toContain('Hamsters rule the world');
   });
 
   it("Search log book should return results for info event", () => {
-    let savedMessageObject = hamstersLogger.searchLogBook('One hamster', 'info');
+    let savedMessageObject = searchLogBook('One hamster', 'info');
     expect(typeof savedMessageObject).toEqual('object');
     expect(savedMessageObject.total).toEqual(1);
     expect(savedMessageObject.results[0]).toContain('One hamster at a time');
   });
 
   it("Search log book should return results for warning event", () => {
-    let savedMessageObject = hamstersLogger.searchLogBook('talking without a brain', 'warning');
+    let savedMessageObject = searchLogBook('talking without a brain', 'warning');
     expect(typeof savedMessageObject).toEqual('object');
     expect(savedMessageObject.total).toEqual(1);
     expect(savedMessageObject.results[0]).toContain('Some hamsters do an awful lot of talking without a brain');
   });
 
   it("Search log book should return results without error event", () => {
-    let savedMessageObject = hamstersLogger.searchLogBook('Hamsters rule');
+    let savedMessageObject = searchLogBook('Hamsters rule');
     expect(typeof savedMessageObject).toEqual('object');
     expect(savedMessageObject.total).toEqual(1);
     expect(savedMessageObject.results[0]).toContain('Hamsters rule the world');
   });
 
   it("Search log book should return results without info event", () => {
-    let savedMessageObject = hamstersLogger.searchLogBook('at a time');
+    let savedMessageObject = searchLogBook('at a time');
     expect(typeof savedMessageObject).toEqual('object');
     expect(savedMessageObject.total).toEqual(1);
     expect(savedMessageObject.results[0]).toContain('One hamster at a time');
   });
 
   it("Search log book should return results without warning event", () => {
-    let savedMessageObject = hamstersLogger.searchLogBook('talking without a brain');
+    let savedMessageObject = searchLogBook('talking without a brain');
     expect(typeof savedMessageObject).toEqual('object');
     expect(savedMessageObject.total).toEqual(1);
     expect(savedMessageObject.results[0]).toContain('Some hamsters do an awful lot of talking without a brain');

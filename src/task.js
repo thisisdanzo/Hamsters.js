@@ -56,7 +56,7 @@ export default class task {
 	* @param {function} wheel - Scaffold to execute login within
 	* @param {number} maxThreads - Maximum number of threads for this client
 	*/
-	schedule() {
+	schedule(callback) {
 		return new Promise((resolve, reject) => {
 		  let i = 0;
 		  while (i < task.threads) {

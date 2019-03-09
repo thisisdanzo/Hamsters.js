@@ -63,18 +63,18 @@ export function generateTimeStampedMessage(type, message) {
   return record;
 };
 
-function saveToLogBook(eventType, message) {
+export function saveToLogBook(eventType, message) {
   logBook[eventType].push(message);
 };
 
-function fetchLogBook(eventType) {
+export function fetchLogBook(eventType) {
   if(eventType) {
     return logBook[eventType];
   }
   return logBook;
 };
 
-function findStringInLogBook(logBookEntries, searchString) {
+export function findStringInLogBook(logBookEntries, searchString) {
   let searchResults = [];
   let i = 0;
   for (i; i < logBookEntries.length; i++) {
@@ -85,7 +85,7 @@ function findStringInLogBook(logBookEntries, searchString) {
   return searchResults;
 };
 
-function findStringInLogBookAllTypes(logBook, searchString) {
+export function findStringInLogBookAllTypes(logBook, searchString) {
   let searchResults = [];
   let key, eventTypeResults, tmpEntries = null;
   for(key in logBook) {

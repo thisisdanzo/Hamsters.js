@@ -19,7 +19,7 @@ import { errorLog } from './logger';
 * @param {function} workerLogic - Scaffold to use within worker thread
 */
 export function generateWorkerBlob(workerLogic) {
-  let hamsterBlob = this.createDataBlob('(' + String(workerLogic) + ')();');
+  let hamsterBlob = createDataBlob('(' + String(workerLogic) + ')();');
   let dataBlobURL = URL.createObjectURL(hamsterBlob);
   return dataBlobURL;
 }
@@ -46,7 +46,7 @@ export function mergeOutputData(task, threadId, results) {
 */
 export function processDataType(dataType, buffer, transferrable) {
   if(transferrable) {
-    return this.typedArrayFromBuffer(dataType, buffer);
+    return typedArrayFromBuffer(dataType, buffer);
   }
   return buffer;
 }
@@ -148,7 +148,7 @@ export function locateBlobBuilder() {
 */
 export function createDataBlob(textContent) {
   if(typeof Blob === 'undefined') {
-    let BlobMaker = this.locateBlobBuilder();
+    let BlobMaker = locateBlobBuilder();
     let blob = new BlobMaker();
     blob.append([textContent], {
       type: 'application/javascript'

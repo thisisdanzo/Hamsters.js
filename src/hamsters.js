@@ -11,25 +11,23 @@
 
 'use strict';
 
-import version from './version';
-import habitat from './habitat';
-import pool from './pool';
-import queue from './queue';
-import data from './data';
-import task from './task';
-import logger from './logger';
+import { version } from './version';
+import { habitat } from './habitat';
+import { pool } from './pool';
+import { queue } from './queue';
+// import { data } from './data';
+import { task } from './task';
+import { infoLog, errorLog } from './logger';
 
-export default class hamstersjs {
+class hamstersjs {
 
   /**
   * @constructor
   * @function constructor - Sets properties for this class
   */
   constructor() {
-    this.version = version.current();
+    this.version = version;
     this.maxThreads = habitat.logicalThreads;
-    this.habitat = habitat;
-    this.data = data;
     this.pool = pool;
     this.logger = logger;
     this.run = this.runTaskUsingCallback;
@@ -45,11 +43,11 @@ export default class hamstersjs {
     if (typeof startOptions !== 'undefined') {
       this.processStartOptions(startOptions);
     }
-    if(!this.habitat.legacy && this.habitat.persistence === true) {
-      pool.spawnHamsters(this.maxThreads);
+    if(!habitat.legacy && habitat.persistence === true) {
+      spawnHamsters(this.maxThreads);
     }
-    logger.info(`Initialized using up to ${this.maxThreads} threads.`);
-    delete this.init;
+    infoLog(`Initialized using up to ${this.maxThreads} threads`);
+    delete this.init; //Delete initialize method after startup, ensure it can't be run again with bad options "improved security"
   }
 
   /**
@@ -70,14 +68,14 @@ export default class hamstersjs {
     let key = null;
     for (key of Object.keys(startOptions)) {
       if (habitatKeys.indexOf(key.toLowerCase()) !== -1) {
-        this.habitat[key] = startOptions[key];
+        habitat[key] = startOptions[key];
       } else {
         this[key] = startOptions[key];
       }
     }
     // Ensure legacy mode is disabled when we pass a third party worker library
-    if(typeof this.habitat.Worker === 'function' && startOptions['legacy'] !== true) {
-      this.habitat.legacy = false;
+    if(typeof habitat.Worker === 'function' && startOptions['legacy'] !== true) {
+      habitat.legacy = false;
     }
   }
 
@@ -91,11 +89,11 @@ export default class hamstersjs {
   */
   runTaskUsingPromise(params, functionToRun) {
     return new Promise((resolve, reject) => {
-      let task = new task(params, functionToRun, this, resolve, reject);
-      pool.scheduleTask(task, this).then((results) => {
+      let task = new task(params, functionToRun, resolve, reject);
+      pool.scheduleTask(task).then((results) => {
         task.onSuccess(results);
       }).catch((error) => {
-        logger.error(error.message, task.onError);
+        errorLog(error.message, task.onError);
       });
     });
   }
@@ -110,11 +108,11 @@ export default class hamstersjs {
   * @return {array} Results from functionToRun.
   */
   runTaskUsingCallback(params, functionToRun, onSuccess, onError) {
-    let task = new task(params, functionToRun, this, onSuccess, onError);
-    pool.scheduleTask(task, this).then((results) => {
+    let task = new task(params, functionToRun, onSuccess, onError);
+    pool.scheduleTask(task).then((results) => {
       task.onSuccess(results);
     }).catch((error) => {
-      logger.error(error.message, task.onError);
+      errorLog(error.message, task.onError);
     });
   }
 
@@ -130,14 +128,13 @@ export default class hamstersjs {
   hamsterWheel(thread, task, resolve, reject) {
     let index = task.indexes[thread];
     if(this.maxThreads === pool.running.length) {
-      return this.addWorkToPending(index, resolve, reject);
+      return addWorkToPending(index, resolve, reject);
     }
-    let hamster = pool.fetchHamster(pool.running.length, habitat);
+    let hamster = pool.fetchHamster(pool.running.length);
     task.run(hamster, index, resolve, reject);
   }
 
 }
 
-
 //Expose library class
-let hamsters = new hamstersjs();
+export let hamsters = new hamstersjs();

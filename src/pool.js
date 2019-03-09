@@ -14,10 +14,10 @@
 import hamstersData from './data';
 import { habitat } from './habitat';
 
-export let pool {
+export let pool = {
   tickInterval: 4, //Default is 4ms (HTML5 spec minimum)
   tasks: [],
-  threads: [];
+  threads: [],
   running: [],
   pending: []
 };
